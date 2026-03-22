@@ -1,0 +1,32 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // ─── Model ───────────────────────────────────────────────────────────────
+  // Primary model for all coding tasks. Format: "provider_id/model_id".
+  // Run /models in the TUI to see what GitHub Copilot makes available.
+  "model": "github-copilot/claude-sonnet-4.6",
+
+  // Lightweight model for background tasks (title generation, etc.).
+  // Falls back to the main model if this one is unavailable.
+  "small_model": "github-copilot/claude-haiku-4.5",
+
+  // ─── Provider ────────────────────────────────────────────────────────────
+  // GitHub Copilot authentication is handled via:
+  //   /connect  →  select "GitHub Copilot"  →  authenticate via device code
+  // Credentials are stored in ~/.local/share/opencode/auth.json.
+  // No API key is needed here.
+  //
+  // Provider-level options (timeout applies to all Copilot requests).
+  "provider": {
+    "github-copilot": {
+      "options": {
+        // Request timeout in milliseconds (default: 300000 = 5 min).
+        "timeout": 1000000
+      }
+    }
+  },
+
+  // Restrict OpenCode to GitHub Copilot only — prevents accidental use of
+  // other providers even if their credentials are present on this machine.
+  "enabled_providers": ["github-copilot"],
+}

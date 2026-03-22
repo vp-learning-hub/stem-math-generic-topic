@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathQuest — Math for Every Grade</title>
+  <meta name="description" content="Interactive math learning from Grade 4 to Grade 8. Learn numbers, fractions, algebra, and more!">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/cards.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+  <div class="app-wrapper">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <span class="header-topic">🚀 MathQuest</span>
+        <a href="progress.html" style="color:var(--color-text-muted);font-size:.85rem;text-decoration:none;">📊 Progress</a>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <div class="home-header">
+      <div class="home-logo">🚀</div>
+      <h1 class="home-title">MathQuest</h1>
+      <p class="home-subtitle">Master math from Grade 4 all the way to Grade 8 — one card at a time!</p>
+    </div>
+
+    <!-- Quick stats -->
+    <div class="home-stats-row" id="stats-row">
+      <div class="home-stat">
+        <span class="home-stat-val" id="stat-cards">0</span>
+        <span class="home-stat-lbl">Cards Done</span>
+      </div>
+      <div class="home-stat">
+        <span class="home-stat-val" id="stat-streak">0</span>
+        <span class="home-stat-lbl">Best Streak</span>
+      </div>
+      <div class="home-stat">
+        <span class="home-stat-val" id="stat-pts">0</span>
+        <span class="home-stat-lbl">Points</span>
+      </div>
+      <div class="home-stat">
+        <span class="home-stat-val" id="stat-badges">0</span>
+        <span class="home-stat-lbl">Badges</span>
+      </div>
+    </div>
+
+    <!-- Continue button -->
+    <div class="continue-section" id="continue-section" style="display:none;">
+      <div class="continue-btn-wrap">
+        <a href="learn.html" class="btn btn--primary" style="width:100%;max-width:400px;">
+          Continue Learning 🚀
+        </a>
+      </div>
+    </div>
+
+    <!-- Topic grid -->
+    <div class="topics-section">
+      <p class="section-title">Your Math Journey</p>
+      <div class="topics-grid" id="topics-grid">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+  </div><!-- /app-wrapper -->
+
+  <!-- Scripts -->
+  <script src="data/math-curriculum.js"></script>
+  <script src="data/math-facts.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/achievements.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const data = Storage.init();
+      renderStats(data);
+      renderTopics(data);
+      showContinueIfNeeded(data);
+    });
+
+    function renderStats(data) {
+      document.getElementById('stat-cards').textContent  = data.stats.totalCardsCompleted;
+      document.getElementById('stat-streak').textContent = data.stats.streakBest;
+      document.getElementById('stat-pts').textContent    = data.stats.totalPoints;
+      document.getElementById('stat-badges').textContent = data.achievements.earned.length;
+    }
+
+    function renderTopics(data) {
+      const grid = document.getElementById('topics-grid');
+      grid.innerHTML = '';
+
+      MathCurriculum.progression.forEach(topicId => {
+        const topic = MathCurriculum.topics[topicId];
+        const tp    = data.topicProgress[topicId];
+        const isLocked = tp.status === 'locked';
+        const isActive = topicId === data.currentTopic;
+
+        // Progress percentage
+        const pct = tp.cardsTotal > 0
+          ? Math.round((tp.cardsCompleted / tp.cardsTotal) * 100)
+          : 0;
+
+        // Status badge
+        const statusLabel = {
+          'completed':   'Completed ✓',
+          'in-progress': 'In Progress',
+          'unlocked':    'Ready!',
+          'locked':      'Locked'
+        }[tp.status] || tp.status;
+
+        const card = document.createElement('a');
+        card.className = [
+          'topic-card',
+          isLocked ? 'topic-card--locked' : '',
+          tp.status === 'completed' ? 'topic-card--completed' : '',
+          isActive && !isLocked ? 'topic-card--active' : ''
+        ].filter(Boolean).join(' ');
+
+        card.href = isLocked ? '#' : `learn.html?topic=${topicId}`;
+        card.style.setProperty('--topic-color', topic.color);
+
+        card.innerHTML = `
+          <span class="topic-status-badge status--${tp.status}">${statusLabel}</span>
+          <div class="topic-icon">${topic.icon}</div>
+          <div class="topic-name">${topic.name}</div>
+          <div class="topic-grade">${topic.gradeLevel}</div>
+          <div class="topic-progress-bar">
+            <div class="topic-progress-fill" style="width:${pct}%;background:${topic.color};"></div>
+          </div>
+          ${isLocked ? '<span class="lock-icon">🔒</span>' : ''}
+        `;
+
+        if (isLocked) {
+          card.addEventListener('click', e => {
+            e.preventDefault();
+            showLockedMessage(topic.name);
+          });
+        } else {
+          card.addEventListener('click', () => {
+            // Update current topic before navigating
+            const stored = Storage.init();
+            Storage.switchTopic(stored, topicId);
+          });
+        }
+
+        grid.appendChild(card);
+      });
+    }
+
+    function showContinueIfNeeded(data) {
+      if (data.stats.totalCardsCompleted > 0) {
+        document.getElementById('continue-section').style.display = 'block';
+      }
+    }
+
+    function showLockedMessage(name) {
+      const existing = document.getElementById('lock-toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.id = 'lock-toast';
+      toast.style.cssText = `
+        position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+        background:var(--color-card);border:1px solid var(--color-card-border);
+        border-radius:var(--radius-full);padding:12px 24px;
+        font-size:.875rem;color:var(--color-text-muted);
+        box-shadow:var(--shadow-card);z-index:500;
+        animation:floatUp .3s ease;
+      `;
+      toast.textContent = `🔒 Complete previous topics to unlock ${name}`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+  </script>
+</body>
+</html>

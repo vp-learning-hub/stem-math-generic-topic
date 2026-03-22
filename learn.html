@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathQuest — Learning</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/cards.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+  <div class="app-wrapper">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <a href="index.html" class="header-back">← Topics</a>
+        <span class="header-topic" id="header-topic">🔢 Loading...</span>
+        <button class="header-settings" id="btn-settings" title="Settings">⚙️</button>
+      </div>
+    </header>
+
+    <!-- Progress bar -->
+    <div class="progress-section">
+      <div class="progress-bar">
+        <div class="progress-bar__fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-label" id="progress-label">0 / 30 cards</div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <span class="stat-item" id="stat-streak">⚡ 0</span>
+      <span class="stat-item" id="stat-points">⭐ 0</span>
+      <span class="stat-item" id="stat-grade" style="font-size:.75rem;color:var(--color-text-light);">Grade 4–5</span>
+    </div>
+
+    <!-- Main card area -->
+    <main class="main-content">
+      <div id="card-container">
+        <div class="card">
+          <div class="card__body" style="padding:var(--space-xl);text-align:center;">
+            <div style="font-size:2rem;margin-bottom:var(--space-md);">🚀</div>
+            <p style="color:var(--color-text-muted);">Loading your next card...</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div><!-- /app-wrapper -->
+
+  <!-- Achievement overlay -->
+  <div id="achievement-overlay" class="hidden">
+    <div class="ach-card">
+      <div class="ach-icon-lg" id="ach-icon">⭐</div>
+      <div class="ach-title-lg" id="ach-name">Achievement!</div>
+      <div class="ach-message" id="ach-msg">You earned a new badge!</div>
+      <button class="btn btn--primary" id="btn-ach-ok" style="width:100%;">Keep Going! 🚀</button>
+    </div>
+  </div>
+
+  <!-- Settings panel -->
+  <div id="settings-panel" class="hidden" style="
+    position:fixed;inset:0;z-index:200;
+    display:flex;align-items:flex-end;justify-content:center;
+    background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);
+  ">
+    <div style="
+      background:var(--color-card);border-top:1px solid var(--color-card-border);
+      border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+      padding:var(--space-xl) var(--space-lg);width:100%;max-width:600px;
+    ">
+      <h3 style="margin-bottom:var(--space-lg);font-size:1.1rem;">Settings</h3>
+
+      <div style="margin-bottom:var(--space-lg);">
+        <p style="font-size:.875rem;color:var(--color-text-muted);margin-bottom:var(--space-sm);">Switch Topic</p>
+        <div id="topic-switcher" style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-sm);"></div>
+      </div>
+
+      <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap;">
+        <button class="btn btn--ghost" id="btn-close-settings" style="flex:1;">Close</button>
+        <button class="btn btn--ghost" id="btn-view-progress" style="flex:1;"
+          onclick="window.location='progress.html'">📊 Progress</button>
+        <button class="btn btn--ghost" id="btn-reset" style="flex:1;color:#ef4444;border-color:rgba(239,68,68,.3);">
+          Reset Progress
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts (order matters!) -->
+  <script src="data/math-curriculum.js"></script>
+  <script src="data/math-facts.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/achievements.js"></script>
+  <script src="js/cards.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Settings panel logic -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Settings open/close
+      const settingsBtn  = document.getElementById('btn-settings');
+      const settingsPanel = document.getElementById('settings-panel');
+      const closeBtn     = document.getElementById('btn-close-settings');
+      const resetBtn     = document.getElementById('btn-reset');
+
+      settingsBtn.addEventListener('click', () => {
+        settingsPanel.classList.remove('hidden');
+        renderTopicSwitcher();
+      });
+      closeBtn.addEventListener('click', () => settingsPanel.classList.add('hidden'));
+      settingsPanel.addEventListener('click', e => {
+        if (e.target === settingsPanel) settingsPanel.classList.add('hidden');
+      });
+
+      resetBtn.addEventListener('click', () => {
+        if (confirm('Reset ALL progress? This cannot be undone.')) {
+          Storage.reset();
+          window.location.href = 'index.html';
+        }
+      });
+    });
+
+    function renderTopicSwitcher() {
+      const d = Storage.init();
+      const el = document.getElementById('topic-switcher');
+      el.innerHTML = '';
+      MathCurriculum.progression.forEach(id => {
+        const t = MathCurriculum.topics[id];
+        const tp = d.topicProgress[id];
+        const isLocked = tp.status === 'locked';
+        const btn = document.createElement('button');
+        btn.className = 'btn btn--ghost';
+        btn.style.fontSize = '.8rem';
+        btn.style.minHeight = '40px';
+        btn.disabled = isLocked;
+        btn.textContent = (isLocked ? '🔒 ' : '') + t.icon + ' ' + t.name;
+        btn.addEventListener('click', () => {
+          document.getElementById('settings-panel').classList.add('hidden');
+          App.switchTopic(id);
+        });
+        el.appendChild(btn);
+      });
+    }
+  </script>
+</body>
+</html>

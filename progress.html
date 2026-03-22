@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathQuest — Your Progress</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+  <div class="app-wrapper">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <a href="index.html" class="header-back">← Home</a>
+        <span class="header-topic">📊 Your Progress</span>
+        <span style="width:60px;"></span>
+      </div>
+    </header>
+
+    <main style="padding:var(--space-lg) var(--space-md);max-width:640px;margin:0 auto;width:100%;">
+
+      <!-- Overall stats -->
+      <h2 class="progress-title" style="font-size:1.25rem;font-weight:800;margin-bottom:var(--space-md);">
+        Overall Stats
+      </h2>
+      <div class="overall-stats-grid" id="overall-stats">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Continue button -->
+      <div style="text-align:center;margin-bottom:var(--space-xl);">
+        <a href="learn.html" class="btn btn--primary" style="width:100%;max-width:400px;">
+          Keep Learning 🚀
+        </a>
+      </div>
+
+      <!-- Topic progress -->
+      <h2 style="font-size:1rem;font-weight:700;margin-bottom:var(--space-md);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;">
+        Topic Progress
+      </h2>
+      <div class="topic-progress-list" id="topic-list">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Badges -->
+      <h2 style="font-size:1rem;font-weight:700;margin-bottom:var(--space-md);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;">
+        Badges
+      </h2>
+      <div class="badges-grid" id="badges-grid">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Reset -->
+      <div style="text-align:center;margin-top:var(--space-xl);padding-bottom:var(--space-xl);">
+        <button class="btn btn--ghost" id="btn-reset"
+          style="color:#ef4444;border-color:rgba(239,68,68,.3);font-size:.8rem;">
+          Reset All Progress
+        </button>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="data/math-curriculum.js"></script>
+  <script src="data/math-facts.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/achievements.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const data = Storage.init();
+      renderOverallStats(data);
+      renderTopicList(data);
+      renderBadges(data);
+
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        if (confirm('Reset ALL progress? This cannot be undone.')) {
+          Storage.reset();
+          window.location.href = 'index.html';
+        }
+      });
+    });
+
+    function renderOverallStats(data) {
+      const s = data.stats;
+      const accuracy = s.totalAttempts > 0
+        ? Math.round((s.totalCorrect / s.totalAttempts) * 100) : 0;
+      const completedTopics = Object.values(data.topicProgress)
+        .filter(t => t.status === 'completed').length;
+
+      document.getElementById('overall-stats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-card-val">${s.totalCardsCompleted}</div>
+          <div class="stat-card-lbl">Cards Done</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val">${accuracy}%</div>
+          <div class="stat-card-lbl">Accuracy</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val">${s.streakBest}</div>
+          <div class="stat-card-lbl">Best Streak</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val">${s.totalPoints}</div>
+          <div class="stat-card-lbl">Points</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val">${data.achievements.earned.length}</div>
+          <div class="stat-card-lbl">Badges</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val">${completedTopics}/10</div>
+          <div class="stat-card-lbl">Topics Done</div>
+        </div>
+      `;
+    }
+
+    function renderTopicList(data) {
+      const list = document.getElementById('topic-list');
+      list.innerHTML = '';
+      MathCurriculum.progression.forEach(topicId => {
+        const topic = MathCurriculum.topics[topicId];
+        const tp = data.topicProgress[topicId];
+        const pct = tp.cardsTotal > 0
+          ? Math.round((tp.cardsCompleted / tp.cardsTotal) * 100) : 0;
+        const acc = tp.totalAttempts > 0
+          ? Math.round((tp.correctAnswers / tp.totalAttempts) * 100) : 0;
+
+        const statusLabel = {
+          'completed':   '✓ Complete',
+          'in-progress': '▶ In Progress',
+          'unlocked':    '◎ Ready',
+          'locked':      '🔒 Locked'
+        }[tp.status] || tp.status;
+
+        const row = document.createElement('div');
+        row.className = 'topic-row';
+        row.innerHTML = `
+          <div class="topic-row-icon">${topic.icon}</div>
+          <div class="topic-row-info">
+            <div class="topic-row-name">${topic.name}</div>
+            <div class="topic-row-meta">
+              ${topic.gradeLevel} · ${statusLabel}
+              ${tp.status !== 'locked' ? ` · ${acc}% accuracy` : ''}
+            </div>
+            <div class="topic-row-bar">
+              <div class="topic-row-fill" style="width:${pct}%;background:${topic.color};"></div>
+            </div>
+          </div>
+          <div class="topic-row-pct">${tp.status === 'locked' ? '🔒' : pct + '%'}</div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function renderBadges(data) {
+      const grid = document.getElementById('badges-grid');
+      grid.innerHTML = '';
+      AchievementsData.forEach(ach => {
+        const earned = data.achievements.earned.includes(ach.id);
+        const item = document.createElement('div');
+        item.className = 'badge-item ' + (earned ? 'badge-item--earned' : 'badge-item--locked');
+        item.title = ach.description;
+        item.innerHTML = `
+          <div class="badge-icon">${ach.icon}</div>
+          <div class="badge-name">${ach.name}</div>
+        `;
+        grid.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>
