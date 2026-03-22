@@ -93,7 +93,8 @@
       MathCurriculum.progression.forEach(topicId => {
         const topic = MathCurriculum.topics[topicId];
         const tp    = data.topicProgress[topicId];
-        const isLocked = tp.status === 'locked';
+        // const isLocked = tp.status === 'locked';
+        const isLocked = false;
         const isActive = topicId === data.currentTopic;
 
         // Progress percentage
