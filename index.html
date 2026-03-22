@@ -17,6 +17,11 @@
       <div class="header-inner">
         <span class="header-topic">🚀 MathQuest</span>
         <a href="progress.html" style="color:var(--color-text-muted);font-size:.85rem;text-decoration:none;">📊 Progress</a>
+        <button id="btn-lock-toggle"
+          onclick="handleLockToggle()"
+          style="background:none;border:1px solid var(--color-card-border);border-radius:var(--radius-full);padding:4px 12px;font-size:.8rem;color:var(--color-text-muted);cursor:pointer;white-space:nowrap;transition:all .2s;">
+          🔒 Locked
+        </button>
       </div>
     </header>
 
@@ -76,6 +81,7 @@
       const data = Storage.init();
       renderStats(data);
       renderTopics(data);
+      renderLockToggle(data);
       showContinueIfNeeded(data);
     });
 
@@ -89,11 +95,13 @@
     function renderTopics(data) {
       const grid = document.getElementById('topics-grid');
       grid.innerHTML = '';
+      const lockMode = data.preferences.lockMode;
 
       MathCurriculum.progression.forEach(topicId => {
         const topic = MathCurriculum.topics[topicId];
         const tp    = data.topicProgress[topicId];
-        const isLocked = tp.status === 'locked';
+        // isLocked is only effective when lockMode is enabled
+        const isLocked = lockMode && tp.status === 'locked';
         const isActive = topicId === data.currentTopic;
 
         // Progress percentage
@@ -106,7 +114,7 @@
           'completed':   'Completed ✓',
           'in-progress': 'In Progress',
           'unlocked':    'Ready!',
-          'locked':      'Locked'
+          'locked':      lockMode ? 'Locked' : 'Ready!'
         }[tp.status] || tp.status;
 
         const card = document.createElement('a');
@@ -121,7 +129,7 @@
         card.style.setProperty('--topic-color', topic.color);
 
         card.innerHTML = `
-          <span class="topic-status-badge status--${tp.status}">${statusLabel}</span>
+          <span class="topic-status-badge status--${isLocked ? 'locked' : tp.status}">${statusLabel}</span>
           <div class="topic-icon">${topic.icon}</div>
           <div class="topic-name">${topic.name}</div>
           <div class="topic-grade">${topic.gradeLevel}</div>
@@ -170,6 +178,29 @@
       toast.textContent = `🔒 Complete previous topics to unlock ${name}`;
       document.body.appendChild(toast);
       setTimeout(() => toast.remove(), 2500);
+    }
+
+    function renderLockToggle(data) {
+      const btn = document.getElementById('btn-lock-toggle');
+      const lockMode = data.preferences.lockMode;
+      if (lockMode) {
+        btn.textContent = '🔒 Locked';
+        btn.style.color = 'var(--color-text-muted)';
+        btn.style.borderColor = 'var(--color-card-border)';
+        btn.title = 'Sequential mode — complete topics in order. Click to allow free access.';
+      } else {
+        btn.textContent = '🔓 Free';
+        btn.style.color = 'var(--color-secondary)';
+        btn.style.borderColor = 'var(--color-secondary)';
+        btn.title = 'Free mode — open any topic. Click to restore sequential order.';
+      }
+    }
+
+    function handleLockToggle() {
+      const data = Storage.init();
+      Storage.toggleLockMode(data);
+      renderTopics(data);
+      renderLockToggle(data);
     }
   </script>
 </body>

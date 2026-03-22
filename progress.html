@@ -120,6 +120,7 @@
     function renderTopicList(data) {
       const list = document.getElementById('topic-list');
       list.innerHTML = '';
+      const lockMode = data.preferences.lockMode;
       MathCurriculum.progression.forEach(topicId => {
         const topic = MathCurriculum.topics[topicId];
         const tp = data.topicProgress[topicId];
@@ -128,11 +129,13 @@
         const acc = tp.totalAttempts > 0
           ? Math.round((tp.correctAnswers / tp.totalAttempts) * 100) : 0;
 
+        // In free mode, locked topics show as "Ready" instead of "Locked"
+        const effectivelyLocked = lockMode && tp.status === 'locked';
         const statusLabel = {
           'completed':   '✓ Complete',
           'in-progress': '▶ In Progress',
           'unlocked':    '◎ Ready',
-          'locked':      '🔒 Locked'
+          'locked':      effectivelyLocked ? '🔒 Locked' : '◎ Ready'
         }[tp.status] || tp.status;
 
         const row = document.createElement('div');
@@ -143,13 +146,13 @@
             <div class="topic-row-name">${topic.name}</div>
             <div class="topic-row-meta">
               ${topic.gradeLevel} · ${statusLabel}
-              ${tp.status !== 'locked' ? ` · ${acc}% accuracy` : ''}
+              ${!effectivelyLocked ? ` · ${acc}% accuracy` : ''}
             </div>
             <div class="topic-row-bar">
               <div class="topic-row-fill" style="width:${pct}%;background:${topic.color};"></div>
             </div>
           </div>
-          <div class="topic-row-pct">${tp.status === 'locked' ? '🔒' : pct + '%'}</div>
+          <div class="topic-row-pct">${effectivelyLocked ? '🔒' : pct + '%'}</div>
         `;
         list.appendChild(row);
       });

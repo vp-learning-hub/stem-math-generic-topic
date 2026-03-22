@@ -126,10 +126,11 @@
       const d = Storage.init();
       const el = document.getElementById('topic-switcher');
       el.innerHTML = '';
+      const lockMode = d.preferences.lockMode;
       MathCurriculum.progression.forEach(id => {
         const t = MathCurriculum.topics[id];
         const tp = d.topicProgress[id];
-        const isLocked = tp.status === 'locked';
+        const isLocked = lockMode && tp.status === 'locked';
         const btn = document.createElement('button');
         btn.className = 'btn btn--ghost';
         btn.style.fontSize = '.8rem';

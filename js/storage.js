@@ -15,7 +15,13 @@ const Storage = {
       return fresh;
     }
     try {
-      return JSON.parse(raw);
+      const data = JSON.parse(raw);
+      // Migrate: ensure lockMode preference exists for older saves
+      if (data.preferences && data.preferences.lockMode === undefined) {
+        data.preferences.lockMode = true;
+        this.save(data);
+      }
+      return data;
     } catch (e) {
       console.warn('Corrupted save data, resetting...', e);
       const fresh = this.createNewUser();
@@ -85,7 +91,8 @@ const Storage = {
       preferences: {
         theme: 'space',
         soundEnabled: false,
-        animationsEnabled: true
+        animationsEnabled: true,
+        lockMode: true        // true = sequential progression, false = free access
       }
     };
   },
@@ -128,8 +135,8 @@ const Storage = {
       topicProgress.status = 'completed';
       topicProgress.completedAt = new Date().toISOString();
 
-      // Unlock next topic
-      if (currentIndex < progression.length - 1) {
+      // Only unlock next topic when in locked (sequential) mode
+      if (data.preferences.lockMode && currentIndex < progression.length - 1) {
         const nextTopic = progression[currentIndex + 1];
         if (data.topicProgress[nextTopic].status === 'locked') {
           data.topicProgress[nextTopic].status = 'unlocked';
@@ -192,7 +199,8 @@ const Storage = {
 
   // Switch to a new topic
   switchTopic(data, topicId) {
-    if (data.topicProgress[topicId].status === 'locked') return false;
+    // Respect lock gate only when lockMode is on
+    if (data.topicProgress[topicId].status === 'locked' && data.preferences.lockMode) return false;
     data.currentTopic = topicId;
     data.currentCardIndex = 0;
     data.session.cardsSinceLastFact = 0;
@@ -202,6 +210,47 @@ const Storage = {
     }
     this.save(data);
     return true;
+  },
+
+  // Toggle between locked (sequential) and free (open) mode
+  toggleLockMode(data) {
+    data.preferences.lockMode = !data.preferences.lockMode;
+
+    if (!data.preferences.lockMode) {
+      // Switching to free mode: unlock all currently locked topics
+      MathCurriculum.progression.forEach(topicId => {
+        if (data.topicProgress[topicId].status === 'locked') {
+          data.topicProgress[topicId].status = 'unlocked';
+        }
+      });
+    } else {
+      // Switching back to locked mode:
+      // Keep completed/in-progress/attempted topics accessible;
+      // re-lock only untouched topics beyond the current frontier.
+      const progression = MathCurriculum.progression;
+      // Find the index of the last completed topic
+      let frontierIndex = -1;
+      progression.forEach((topicId, index) => {
+        if (data.topicProgress[topicId].status === 'completed') {
+          frontierIndex = index;
+        }
+      });
+      // Topics beyond frontier+1 with zero attempts get locked again
+      progression.forEach((topicId, index) => {
+        const tp = data.topicProgress[topicId];
+        if (
+          index > frontierIndex + 1 &&
+          tp.correctAnswers === 0 &&
+          tp.totalAttempts === 0 &&
+          tp.status !== 'completed' &&
+          tp.status !== 'in-progress'
+        ) {
+          tp.status = 'locked';
+        }
+      });
+    }
+
+    this.save(data);
   },
 
   // Start new session
